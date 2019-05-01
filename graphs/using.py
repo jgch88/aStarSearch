@@ -1,6 +1,8 @@
 from SimpleGraph import SimpleGraph 
 from SquareGridGraph import SquareGrid, draw_grid
+from GridWithWeights import GridWithWeights
 from Queue import Queue
+from PriorityQueue import PriorityQueue
 
 # an arbitrary graph
 example_graph = SimpleGraph()
@@ -111,3 +113,75 @@ def breadth_first_search_3(graph, start, goal):
 end = (24, 0)
 parents = breadth_first_search_3(g, start, end)
 draw_grid(g, point_to=parents, start=start)
+
+# implementation 4: dijkstra. 
+# the graph needs to know the cost of movement
+# the queue needs to return nodes in a prioritised order
+# the search needs to keep track of the costs from the graph and queue them in a prioritised manner
+def dijkstra_search(graph, start, goal):
+    frontier = PriorityQueue()
+    frontier.put(start, 0)
+
+    # different from first implementation in that it remembers
+    # WHERE we came from, not just that we visited it
+    came_from = {}
+    cost_so_far = {}
+    came_from[start] = None
+    cost_so_far[start] = 0
+
+    while not frontier.empty():
+        # from front of the queue
+        current = frontier.get()
+        # print("Visiting ", current)
+
+        # main difference from implementation 2
+        if current == goal:
+            break
+
+        # get neighbors of current node
+        # add it to back of frontier queue if not yet visited
+        for next in graph.neighbors(current):
+            new_cost = cost_so_far[current] + graph.cost(current, next)
+            if next not in cost_so_far or new_cost < cost_so_far[next]:
+                cost_so_far[next] = new_cost
+                priority = new_cost
+                frontier.put(next, priority)
+                came_from[next] = current
+
+    return came_from, cost_so_far
+
+def reconstruct_path(came_from, start, goal):
+    current = goal
+    path = []
+    while current != start:
+        path.append(current)
+        current = came_from[current]
+    path.append(start)
+    path.reverse()
+    return path
+
+# in civilisation, moving through plains/deserts might cost 1 move-point
+# but moving through forests costs 5
+# and moving through water costs 10. 
+# even on a grid, distance != cost of movement!
+# https://www.redblobgames.com/pathfinding/a-star/introduction.html
+
+civilisation_map = GridWithWeights(10, 10)
+civilisation_map.walls = [(1, 7), (1, 8), (2, 7), (2, 8), (3, 7), (3, 8)]
+
+# generates a dictionary of tuple: 5
+# for 'forest' locations
+civilisation_map.weights = {loc: 5 for loc in [(3, 4), (3, 5), (4, 1), (4, 2),
+                                       (4, 3), (4, 4), (4, 5), (4, 6), 
+                                       (4, 7), (4, 8), (5, 1), (5, 2),
+                                       (5, 3), (5, 4), (5, 5), (5, 6), 
+                                       (5, 7), (5, 8), (6, 2), (6, 3), 
+                                       (6, 4), (6, 5), (6, 6), (6, 7), 
+                                       (7, 3), (7, 4), (7, 5)]}
+
+civ_start = (1,4)
+civ_end = (8,5)
+came_from, cost_so_far = dijkstra_search(civilisation_map, civ_start, civ_end)
+draw_grid(civilisation_map, point_to=came_from, start=civ_start, goal=civ_end, width=3)
+draw_grid(civilisation_map, number=cost_so_far, start=civ_start, goal=civ_end, width=3)
+draw_grid(civilisation_map, path=reconstruct_path(came_from, start=civ_start, goal=civ_end), start=civ_start, goal=civ_end, width=3)
