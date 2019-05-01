@@ -160,7 +160,7 @@ def reconstruct_path(came_from, start, goal):
     path.reverse()
     return path
 
-# in civilisation, moving through plains/deserts might cost 1 move-point
+# in Civilisation (the game), moving through plains/deserts might cost 1 move-point
 # but moving through forests costs 5
 # and moving through water costs 10. 
 # even on a grid, distance != cost of movement!
@@ -182,6 +182,47 @@ civilisation_map.weights = {loc: 5 for loc in [(3, 4), (3, 5), (4, 1), (4, 2),
 civ_start = (1,4)
 civ_end = (8,5)
 came_from, cost_so_far = dijkstra_search(civilisation_map, civ_start, civ_end)
+draw_grid(civilisation_map, point_to=came_from, start=civ_start, goal=civ_end, width=3)
+draw_grid(civilisation_map, number=cost_so_far, start=civ_start, goal=civ_end, width=3)
+draw_grid(civilisation_map, path=reconstruct_path(came_from, start=civ_start, goal=civ_end), start=civ_start, goal=civ_end, width=3)
+
+
+# implementation 5: A* Search
+# use both a heuristic function and ordering from dijkstra's algorithm.
+# (using only the heuristic without dikjstra's weights is the same as Greedy Best-First search)
+
+# our heuristic is the "manhattan distance" between two points on a grid
+def heuristic(a, b):
+    (x1, y1) = a
+    (x2, y2) = b
+    return abs(x1 - x2) + abs(y1 - y2)
+
+def a_star_search(graph, start, goal):
+    frontier = PriorityQueue()
+    frontier.put(start, 0)
+
+    came_from = {}
+    cost_so_far = {}
+    came_from[start] = None
+    cost_so_far[start] = 0
+
+    while not frontier.empty():
+        current = frontier.get()
+
+        if current == goal:
+            break
+
+        for next in graph.neighbors(current):
+            new_cost = cost_so_far[current] + graph.cost(current, next)
+            if next not in cost_so_far or new_cost < cost_so_far[next]:
+                cost_so_far[next] = new_cost
+                priority = new_cost + heuristic(goal, next) # reduce priority for positions further away from goal
+                frontier.put(next, priority)
+                came_from[next] = current
+
+    return came_from, cost_so_far
+
+came_from, cost_so_far = a_star_search(civilisation_map, civ_start, civ_end)
 draw_grid(civilisation_map, point_to=came_from, start=civ_start, goal=civ_end, width=3)
 draw_grid(civilisation_map, number=cost_so_far, start=civ_start, goal=civ_end, width=3)
 draw_grid(civilisation_map, path=reconstruct_path(came_from, start=civ_start, goal=civ_end), start=civ_start, goal=civ_end, width=3)
